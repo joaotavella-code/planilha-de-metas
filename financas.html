@@ -443,14 +443,20 @@
   // ---------------- App ----------------
   function iniciarApp(){
     $("authView").classList.add("hide"); $("appView").classList.remove("hide");
-    var hoje=new Date();
-    if(!$("fDate").value) $("fDate").value = ymd(hoje);
     renderMes();
     carregar();
   }
 
+  // data padrão do campo = mês que está sendo visto (hoje se for o mês atual real, senão dia 01)
+  function dataPadraoMes(){
+    var hoje=new Date();
+    if(cur.getFullYear()===hoje.getFullYear() && cur.getMonth()===hoje.getMonth()) return ymd(hoje);
+    return firstDay(cur.getFullYear(), cur.getMonth());
+  }
+
   function renderMes(){
     $("mLbl").textContent = MESES[cur.getMonth()] + " " + cur.getFullYear();
+    $("fDate").value = dataPadraoMes();
   }
 
   $("mPrev").onclick=function(){ cur.setMonth(cur.getMonth()-1); renderMes(); carregar(); };
@@ -491,10 +497,14 @@
     $("btnAdd").disabled=true;
     inserir(obj).then(function(){
       $("fDesc").value=""; $("fAmount").value=""; $("fCat").value=""; $("fDue").value=""; $("fRec").checked=false; $("fStatus").value="pending";
-      toast("Lançamento adicionado ✓");
-      // se o lançamento for de outro mês, pula pra ele
+      // NÃO pula de mês. Se o lançamento cair em outro mês, avisa onde foi salvo.
       var d=new Date(date+"T12:00:00");
-      cur=new Date(d.getFullYear(), d.getMonth(), 1); renderMes();
+      if(d.getFullYear()!==cur.getFullYear() || d.getMonth()!==cur.getMonth()){
+        toast("Salvo em "+MESES[d.getMonth()]+"/"+d.getFullYear()+" (navegue até lá) ✓");
+      } else {
+        toast("Lançamento adicionado ✓");
+      }
+      $("fDate").value = dataPadraoMes();  // volta pro padrão do mês que está sendo visto
       carregar();
     }).catch(erroAuth).then(function(){ $("btnAdd").disabled=false; });
   };
