@@ -1,0 +1,1310 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planilha de Metas</title>
+<meta name="theme-color" content="#1E5B43">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Metas">
+<meta name="description" content="Acompanhe suas metas de poupança e marque cada depósito.">
+<script>
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  :root{
+    --paper:#EFF1E9;
+    --paper-2:#E5E9DD;
+    --ink:#14211C;
+    --ink-soft:#5D6A61;
+    --line:#C3CBBB;
+    --accent:#1E5B43;
+    --stamp:#B0271B;
+    --radius:3px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    font-size:15px;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .cond{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif}
+
+  /* ---------- cabeçalho ---------- */
+  .masthead{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:26px}
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--ink-soft);margin:0 0 6px
+  }
+  .masthead h1{
+    font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;
+    font-size:clamp(30px,7vw,54px);line-height:.98;letter-spacing:-.015em;
+    text-transform:uppercase;margin:0
+  }
+  .masthead .goal{
+    font-family:"IBM Plex Mono",monospace;font-weight:600;
+    font-size:clamp(18px,3.4vw,26px);margin-top:8px;color:var(--accent)
+  }
+
+  /* ---------- formulário ---------- */
+  .card{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px;max-width:620px
+  }
+  .field{margin-bottom:18px}
+  .field label,.legend{
+    display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    font-family:"IBM Plex Mono",monospace;color:var(--ink-soft);margin-bottom:6px
+  }
+  input[type=text],input[type=number],input[type=date]{
+    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--paper);color:var(--ink);font-size:16px;
+    font-family:"IBM Plex Mono",monospace
+  }
+  input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .seg{display:flex;flex-wrap:wrap;gap:6px}
+  .seg button{
+    flex:1 1 auto;min-width:96px;padding:10px 12px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink-soft);border-radius:var(--radius);
+    font-family:"IBM Plex Sans",sans-serif;font-size:14px;cursor:pointer
+  }
+  .seg button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .check{display:flex;gap:9px;align-items:flex-start;cursor:pointer;font-size:14px}
+  .check input{margin-top:3px;accent-color:var(--accent);width:16px;height:16px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:520px){.two{grid-template-columns:1fr}}
+
+  .preview{
+    border-left:3px solid var(--accent);background:var(--paper-2);
+    padding:11px 13px;margin:4px 0 20px;font-size:14px
+  }
+  .preview strong{font-family:"IBM Plex Mono",monospace}
+  .warn{border-left-color:var(--stamp);color:var(--stamp)}
+
+  .btn{
+    padding:12px 20px;border:1px solid var(--accent);background:var(--accent);color:#fff;
+    border-radius:var(--radius);font-size:15px;font-weight:500;cursor:pointer;
+    font-family:"IBM Plex Sans",sans-serif
+  }
+  .btn:hover{background:#174a36}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  .btn.ghost:hover{background:var(--paper-2)}
+  .btn.small{padding:8px 13px;font-size:13px}
+
+  /* ---------- painel ---------- */
+  .bar{height:10px;background:var(--paper-2);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .35s ease}
+  .barline{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 7px}
+  .barline b{font-family:"IBM Plex Mono",monospace;font-size:22px;font-weight:600}
+  .barline em{font-style:normal;font-size:12px;color:var(--ink-soft);font-family:"IBM Plex Mono",monospace}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+    border:1px solid var(--line);margin:20px 0 24px}
+  .stats div{background:var(--paper);padding:12px 14px}
+  .stats dt{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+    font-family:"IBM Plex Mono",monospace;margin:0 0 4px}
+  .stats dd{margin:0;font-family:"IBM Plex Mono",monospace;font-size:17px;font-weight:500}
+  @media(max-width:640px){.stats{grid-template-columns:1fr 1fr}}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+  .toolbar .spacer{flex:1}
+  .saved{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft);
+    letter-spacing:.1em;text-transform:uppercase}
+
+  /* ---------- lista de metas ---------- */
+  .meta{
+    display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:8px;cursor:pointer;font-family:inherit;color:var(--ink)
+  }
+  .meta:hover{border-color:var(--ink)}
+  .meta .info{flex:1;min-width:0}
+  .meta .nm{font-weight:600;font-size:16px;margin-bottom:3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta .sub{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-soft)}
+  .meta .mini{height:5px;background:var(--paper-2);border-radius:3px;margin-top:8px;overflow:hidden}
+  .meta .mini span{display:block;height:100%;background:var(--accent)}
+  .meta .pc{font-family:"IBM Plex Mono",monospace;font-size:18px;font-weight:600;color:var(--accent)}
+  .del{border:1px solid var(--line);background:transparent;color:var(--ink-soft);
+    border-radius:var(--radius);padding:7px 9px;font-size:12px;cursor:pointer;
+    font-family:"IBM Plex Sans",sans-serif}
+  .del:hover{border-color:var(--stamp);color:var(--stamp)}
+  .empty{border:1px dashed var(--line);border-radius:var(--radius);padding:24px;
+    text-align:center;color:var(--ink-soft);margin-bottom:14px}
+
+  /* ---------- cartela ---------- */
+  .grid{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  @media(max-width:520px){.grid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:5px}}
+  .cell{
+    position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:8px 7px 7px;text-align:left;cursor:pointer;min-height:70px;
+    display:flex;flex-direction:column;justify-content:space-between;
+    font-family:"IBM Plex Mono",monospace;color:var(--ink);
+    transition:border-color .15s,background .15s
+  }
+  .cell:hover{border-color:var(--ink)}
+  .cell .idx{font-size:10px;color:var(--ink-soft)}
+  .cell .val{font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .cell .val small{font-size:10px;font-weight:400;color:var(--ink-soft);margin-right:3px}
+  .cell .when{font-size:10px;color:var(--ink-soft)}
+  .cell .tag{position:absolute;right:6px;top:6px;font-size:9px;color:var(--ink-soft);
+    letter-spacing:.08em;text-transform:uppercase}
+  .cell.paid{background:#FBF3F1;border-color:#E2B6AF}
+  .cell.paid .val,.cell.paid .idx{color:#8E5A52}
+  .cell.paid .when{color:var(--stamp)}
+  .cell.cstart{border-left:3px solid var(--accent)}
+  .stamp{
+    position:absolute;right:5px;bottom:20px;transform:rotate(-11deg);
+    border:2px solid var(--stamp);color:var(--stamp);border-radius:2px;
+    font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:11px;
+    letter-spacing:.12em;padding:1px 5px;opacity:.82;pointer-events:none
+  }
+  .cell.pop .stamp{animation:pop .22s ease-out}
+  @keyframes pop{from{transform:rotate(-24deg) scale(1.7);opacity:0}to{transform:rotate(-11deg) scale(1);opacity:.82}}
+
+  .foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--ink-soft);max-width:620px}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Planilha de metas</p>
+    <h1 id="title">Nova meta</h1>
+    <div class="goal mono" id="goalLine" hidden></div>
+  </header>
+
+  <!-- ====== LOGIN ====== -->
+  <section id="auth" hidden>
+    <div class="card" style="max-width:420px">
+      <div class="field">
+        <label for="aMail">E-mail</label>
+        <input type="text" id="aMail" inputmode="email" autocomplete="email"
+               style="font-family:'IBM Plex Sans',sans-serif">
+      </div>
+      <div class="field">
+        <label for="aPass">Senha</label>
+        <input type="password" id="aPass" autocomplete="current-password"
+               style="font-family:'IBM Plex Sans',sans-serif">
+      </div>
+      <div class="preview" id="aMsg" hidden></div>
+      <button class="btn" id="btnAuth">Entrar</button>
+      <button class="btn ghost" id="btnSwitch">Criar conta</button>
+      <button class="btn ghost small" id="btnForgot" style="display:block;width:100%;margin-top:10px">Esqueci minha senha</button>
+    </div>
+  </section>
+
+  <!-- ====== NOVA SENHA ====== -->
+  <section id="recover" hidden>
+    <div class="card" style="max-width:420px">
+      <p class="eyebrow" style="margin-bottom:10px">Redefinição de senha</p>
+      <p style="margin:0 0 16px;font-size:14px;color:var(--ink-soft)">Crie uma nova senha para acessar suas metas.</p>
+      <div class="field" style="margin-bottom:8px">
+        <label for="rPass">Nova senha</label>
+        <input type="password" id="rPass" autocomplete="new-password" placeholder="Mínimo de 6 caracteres"
+               style="font-family:'IBM Plex Sans',sans-serif">
+      </div>
+      <label class="check" style="margin-bottom:16px">
+        <input type="checkbox" id="rShow"><span>Mostrar senha</span>
+      </label>
+      <div class="preview" id="rMsg" hidden></div>
+      <button class="btn" id="btnSavePass">Salvar nova senha</button>
+      <button class="btn ghost" id="btnBackLogin">Voltar ao login</button>
+    </div>
+  </section>
+
+  <!-- ====== LISTA ====== -->
+  <section id="list" hidden>
+    <div id="listBox"></div>
+    <div class="toolbar">
+      <button class="btn" id="btnNew">Nova meta</button>
+      <span class="spacer"></span>
+      <span class="saved" id="listTag"></span>
+      <button class="btn ghost small" id="btnOut">Sair</button>
+    </div>
+  </section>
+
+  <!-- ====== SETUP ====== -->
+  <section id="setup" hidden>
+    <div class="card">
+      <div class="field">
+        <label for="fName">Nome da meta</label>
+        <input type="text" id="fName" placeholder="Reserva de emergência" style="font-family:'IBM Plex Sans',sans-serif">
+      </div>
+
+      <div class="field">
+        <label for="fGoal" id="lblGoal">Quanto quero juntar</label>
+        <input type="text" id="fGoal" inputmode="numeric" placeholder="R$ 125.250,00">
+      </div>
+
+      <div class="field">
+        <span class="legend">Deposito a cada</span>
+        <div class="seg" id="segUnit">
+          <button type="button" data-v="day">Dia</button>
+          <button type="button" data-v="week">Semana</button>
+          <button type="button" data-v="month">Mês</button>
+        </div>
+      </div>
+
+      <div class="two">
+        <div class="field">
+          <label for="fCount" id="lblCount">Quantos depósitos</label>
+          <input type="number" id="fCount" min="1" max="1000" step="1" value="12">
+        </div>
+        <div class="field">
+          <label for="fStart">Primeiro depósito em</label>
+          <input type="date" id="fStart">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="legend">Como dividir o valor</span>
+        <div class="seg" id="segMode">
+          <button type="button" data-v="equal">Valores iguais</button>
+          <button type="button" data-v="ramp">Valores crescentes</button>
+          <button type="button" data-v="index">Valor = nº do depósito</button>
+          <button type="button" data-v="cycle">Maior no início do mês</button>
+        </div>
+      </div>
+
+      <div class="field" id="fieldRound">
+        <label class="check">
+          <input type="checkbox" id="fRound" checked>
+          <span>Arredondar para reais inteiros — o último depósito fecha a diferença</span>
+        </label>
+      </div>
+
+      <div class="preview" id="preview">Preencha a meta para ver a divisão.</div>
+
+      <button class="btn" id="btnCreate">Criar planilha</button>
+      <button class="btn ghost" id="btnCancel" hidden>Cancelar</button>
+    </div>
+  </section>
+
+  <!-- ====== PAINEL ====== -->
+  <section id="board" hidden>
+    <div class="barline">
+      <b id="pctTxt">0%</b>
+      <em id="ratioTxt">0 de 0 depósitos</em>
+    </div>
+    <div class="bar"><span id="barFill"></span></div>
+
+    <dl class="stats">
+      <div><dt>Já depositado</dt><dd id="sDone">—</dd></div>
+      <div><dt>Ainda falta</dt><dd id="sLeft">—</dd></div>
+      <div><dt>Próximo depósito</dt><dd id="sNext">—</dd></div>
+      <div><dt>Meta batida em</dt><dd id="sEnd">—</dd></div>
+    </dl>
+
+    <div class="toolbar">
+      <button class="btn small" id="btnNext">Marcar próximo depósito</button>
+      <button class="btn ghost small" id="btnOrder">Ordem: menor primeiro</button>
+      <button class="btn ghost small" id="btnPdf">Baixar PDF</button>
+      <span class="spacer"></span>
+      <span class="saved" id="savedTag"></span>
+      <button class="btn ghost small" id="btnList">Minhas metas</button>
+      <button class="btn ghost small" id="btnEdit">Editar plano</button>
+      <button class="btn ghost small" id="btnReset">Zerar marcações</button>
+      <button class="btn ghost small" id="btnOutBoard">Sair</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <p class="foot">Toque em um valor para carimbar o depósito. Toque de novo para desmarcar. Tudo fica salvo neste dispositivo automaticamente.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var KEY = "caderneta:plano";
+  var memory = null; // usado se o armazenamento não estiver disponível
+
+  var brl = new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
+  function money(v){ return brl.format(v); }
+  function shortNum(v){
+    var isInt = Math.abs(v - Math.round(v)) < 0.005;
+    return v.toLocaleString("pt-BR",{
+      minimumFractionDigits: isInt?0:2, maximumFractionDigits: isInt?0:2
+    });
+  }
+  function parseMoney(s){
+    if(!s) return 0;
+    s = String(s).replace(/[^0-9.,]/g,"").replace(/\./g,"");
+    var c = s.indexOf(",");
+    if(c>-1) s = s.slice(0,c) + "." + s.slice(c+1).replace(/,/g,"");
+    var n = parseFloat(s);
+    return isFinite(n)?n:0;
+  }
+  // digita 120000 -> mostra R$ 120.000  |  digita 120000,5 -> R$ 120.000,5
+  function maskMoney(raw){
+    var s = String(raw).replace(/[^0-9,]/g,"");
+    var c = s.indexOf(",");
+    var intPart = (c>-1 ? s.slice(0,c) : s).replace(/,/g,"").replace(/^0+(?=\d)/,"");
+    var dec = c>-1 ? s.slice(c+1).replace(/,/g,"").slice(0,2) : null;
+    if(!intPart && dec===null) return "";
+    var head = "R$ " + (intPart ? Number(intPart).toLocaleString("pt-BR") : "0");
+    return dec===null ? head : head + "," + dec;
+  }
+  function fullMoney(v){
+    return "R$ " + v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function dateFromInput(v){
+    var p = (v||"").split("-");
+    if(p.length!==3) return new Date();
+    return new Date(+p[0], +p[1]-1, +p[2]);
+  }
+  function toInput(d){
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function addPeriod(base, i, unit){
+    var d = new Date(base.getTime());
+    if(unit==="day") d.setDate(d.getDate()+i);
+    else if(unit==="week") d.setDate(d.getDate()+7*i);
+    else { var day=d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+i);
+           d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth()+1, 0).getDate())); }
+    return d;
+  }
+  function fmtShort(d){ return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}); }
+  function fmtLong(d){ return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+  var UNIT_LABEL = {day:"dias", week:"semanas", month:"meses"};
+  var UNIT_ONE = {day:"dia", week:"semana", month:"mês"};
+  var CYCLE_LEN = {day:30, week:4, month:12};        // um ciclo = mês (dias/semanas) ou ano (meses)
+  var CYCLE_NAME = {day:"mês", week:"mês", month:"ano"};
+  function fmtCellDate(d){ return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}); }
+
+  // ---------- cálculo das parcelas ----------
+  function cycleWeights(n, unit){
+    var L = CYCLE_LEN[unit] || 30, w = [], k, c, p;
+    for(k=0;k<n;k++){
+      c = Math.floor(k/L);          // ciclo: quanto mais adiante, mais pesado
+      p = k % L;                    // posição no ciclo: começo pesa mais que o fim
+      w.push((c+1) * (L-p));
+    }
+    return w;
+  }
+
+  function buildValues(goal, n, mode, round, unit){
+    var vals = [], i, sum = 0, raw;
+    if(mode==="index"){                       // dia 1 = R$ 1, dia 45 = R$ 45...
+      for(i=1;i<=n;i++) vals.push(i);
+    }
+    else if(mode==="cycle"){                  // cai dentro do mês, sobe de mês a mês
+      var w = cycleWeights(n, unit), W = 0;
+      for(i=0;i<n;i++) W += w[i];
+      for(i=0;i<n;i++){
+        raw = goal*w[i]/W;
+        vals.push(round ? Math.max(1, Math.round(raw)) : Math.round(raw*100)/100);
+      }
+      for(i=0;i<n;i++) sum += vals[i];
+      var fix = Math.round((vals[0] + goal - sum)*100)/100;   // sobra vai no maior aporte
+      if(fix > 0) vals[0] = fix;
+      else if(round) return buildValues(goal, n, mode, false, unit);
+      return vals;
+    }
+    else if(mode==="ramp"){
+      var step = goal / (n*(n+1)/2);
+      for(i=1;i<=n;i++){
+        raw = step*i;
+        vals.push(round ? Math.max(1, Math.round(raw)) : Math.round(raw*100)/100);
+      }
+    } else {
+      var base = round ? Math.max(1, Math.round(goal/n)) : Math.round((goal/n)*100)/100;
+      for(i=0;i<n;i++) vals.push(base);
+    }
+    for(i=0;i<n-1;i++) sum += vals[i];
+    var last = Math.round((goal - sum)*100)/100;
+    if(last > 0) vals[n-1] = last;
+    else if(round && mode!=="index") return buildValues(goal, n, mode, false);
+    else vals[n-1] = 0.01;   // a sequência já passou da meta: o preview avisa
+    return vals;
+  }
+
+  // ---------- estado ----------
+  var plan = null;          // {name, goal, n, unit, mode, round, start, checked:{}}
+  var values = [];
+  var orderDesc = false;
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ---------- cliente do banco (fala direto com a API, sem biblioteca externa) ----------
+  var API = "https://hmgzydfuweoybuivsfoo.supabase.co";
+  var CHAVE = "sb_publishable_NOoLKY8v0SYx74cB3hY60w_HF6UPxqz";
+  var SESSAO = "metas:sessao";
+
+  function criarCliente(){
+    var sessao = null;
+    try { sessao = JSON.parse(window.localStorage.getItem(SESSAO) || "null"); } catch(e){}
+
+    function guardar(s){
+      sessao = s;
+      try {
+        if(s) window.localStorage.setItem(SESSAO, JSON.stringify(s));
+        else window.localStorage.removeItem(SESSAO);
+      } catch(e){}
+    }
+    function cabecalhos(extra){
+      var h = { apikey: CHAVE, "Content-Type": "application/json" };
+      if(sessao && sessao.access_token) h.Authorization = "Bearer " + sessao.access_token;
+      if(extra) for(var k in extra) h[k] = extra[k];
+      return h;
+    }
+    function falha(j, resp){
+      return { message: (j && (j.error_description || j.msg || j.message || j.error))
+               || ("Erro " + (resp ? resp.status : "de conexão")) };
+    }
+    function corpoJson(resp){
+      return resp.text().then(function(t){ try { return t ? JSON.parse(t) : null; } catch(e){ return null; } });
+    }
+    function guardarToken(j){
+      if(j && j.access_token){
+        guardar({ access_token:j.access_token, refresh_token:j.refresh_token,
+                  expira_em: Date.now() + ((j.expires_in || 3600) * 1000), user:j.user });
+        return true;
+      }
+      return false;
+    }
+    function renovar(){
+      if(!sessao || !sessao.refresh_token) return Promise.resolve(false);
+      return fetch(API + "/auth/v1/token?grant_type=refresh_token", {
+        method:"POST", headers:{ apikey:CHAVE, "Content-Type":"application/json" },
+        body: JSON.stringify({ refresh_token: sessao.refresh_token })
+      }).then(corpoJson).then(function(j){
+        if(guardarToken(j)) return true;
+        guardar(null); return false;
+      }).catch(function(){ return false; });
+    }
+
+    function pedir(caminho, opcoes, jaRenovou){
+      return fetch(API + caminho, opcoes).then(function(resp){
+        if(resp.status === 401 && !jaRenovou && sessao){
+          return renovar().then(function(ok){
+            if(!ok) return { data:null, error:{ message:"Sua sessão expirou. Entre de novo." } };
+            opcoes.headers = cabecalhos(opcoes.headers && opcoes.headers.Prefer ? { Prefer: opcoes.headers.Prefer } : null);
+            return pedir(caminho, opcoes, true);
+          });
+        }
+        return corpoJson(resp).then(function(j){
+          if(!resp.ok) return { data:null, error: falha(j, resp) };
+          return { data:j, error:null };
+        });
+      }).catch(function(){
+        return { data:null, error:{ message:"Sem conexão com o servidor." } };
+      });
+    }
+
+    function tabela(nome){
+      var op = "select", corpo = null, filtros = [], colunas = "*", ordem = null, unico = false, retornar = false;
+      var api = {
+        select: function(c){
+          if(op === "insert"){ retornar = true; return api; }
+          op = "select"; if(c) colunas = c; return api;
+        },
+        order: function(c, o){ ordem = c + "." + (o && o.ascending ? "asc" : "desc"); return api; },
+        eq: function(c, v){ filtros.push(c + "=eq." + encodeURIComponent(v)); return api; },
+        gte: function(c, v){ filtros.push(c + "=gte." + encodeURIComponent(v)); return api; },
+        insert: function(o){ op = "insert"; corpo = o; return api; },
+        update: function(o){ op = "update"; corpo = o; return api; },
+        delete: function(){ op = "delete"; return api; },
+        single: function(){ unico = true; return api; },
+        then: function(ok, erro){ return executar().then(ok, erro); }
+      };
+      function executar(){
+        var params = filtros.slice();
+        if(op === "select"){
+          params.push("select=" + encodeURIComponent(colunas));
+          if(ordem) params.push("order=" + ordem);
+        }
+        var metodo = op === "select" ? "GET" : op === "insert" ? "POST"
+                   : op === "update" ? "PATCH" : "DELETE";
+        var extra = (op === "insert" && retornar) ? { Prefer: "return=representation" } : null;
+        var opcoes = { method: metodo, headers: cabecalhos(extra) };
+        if(corpo) opcoes.body = JSON.stringify(corpo);
+        var caminho = "/rest/v1/" + nome + (params.length ? "?" + params.join("&") : "");
+        return pedir(caminho, opcoes).then(function(r){
+          if(r.error) return r;
+          var d = r.data;
+          if(unico) d = (d && d.length) ? d[0] : (d || null);
+          return { data: d, error: null };
+        });
+      }
+      return api;
+    }
+
+    function autenticar(caminho, dados){
+      return fetch(API + caminho, {
+        method:"POST", headers:{ apikey:CHAVE, "Content-Type":"application/json" },
+        body: JSON.stringify(dados)
+      }).then(function(resp){
+        return corpoJson(resp).then(function(j){
+          if(!resp.ok) return { data:{}, error: falha(j, resp) };
+          var temSessao = guardarToken(j);
+          return { data:{ session: temSessao ? sessao : null, user: j.user || j }, error:null };
+        });
+      }).catch(function(){
+        return { data:{}, error:{ message:"Sem conexão com o servidor." } };
+      });
+    }
+
+    return {
+      from: tabela,
+      auth: {
+        getSession: function(){
+          if(!sessao) return Promise.resolve({ data:{ session:null } });
+          if(sessao.expira_em && sessao.expira_em < Date.now() + 60000)
+            return renovar().then(function(ok){ return { data:{ session: ok ? sessao : null } }; });
+          return Promise.resolve({ data:{ session: sessao } });
+        },
+        signUp: function(d){ return autenticar("/auth/v1/signup", d); },
+        signInWithPassword: function(d){ return autenticar("/auth/v1/token?grant_type=password", d); },
+        resetPasswordForEmail: function(email, redirectTo){
+          var q = redirectTo ? "?redirect_to=" + encodeURIComponent(redirectTo) : "";
+          return fetch(API + "/auth/v1/recover" + q, {
+            method:"POST", headers:{ apikey:CHAVE, "Content-Type":"application/json" },
+            body: JSON.stringify({ email: email })
+          }).then(function(resp){
+            return corpoJson(resp).then(function(j){ return { error: resp.ok ? null : falha(j, resp) }; });
+          }).catch(function(){ return { error:{ message:"Sem conexão com o servidor." } }; });
+        },
+        updateUser: function(attrs){
+          return fetch(API + "/auth/v1/user", { method:"PUT", headers: cabecalhos(), body: JSON.stringify(attrs) })
+            .then(function(resp){
+              return corpoJson(resp).then(function(j){ return resp.ok ? { data:j, error:null } : { data:null, error: falha(j, resp) }; });
+            }).catch(function(){ return { data:null, error:{ message:"Sem conexão com o servidor." } }; });
+        },
+        definirSessao: function(j){ return guardarToken(j); },
+        signOut: function(){
+          var t = sessao && sessao.access_token;
+          guardar(null);
+          if(t) fetch(API + "/auth/v1/logout", { method:"POST",
+            headers:{ apikey:CHAVE, Authorization:"Bearer " + t } }).catch(function(){});
+          return Promise.resolve({ error:null });
+        }
+      }
+    };
+  }
+
+  // ---------- estado do banco ----------
+  var store = { plans: [], activeId: null };
+  var sb = null;
+
+  var savedTimer;
+  function flagSaved(msg){
+    var el = $("board").hidden ? $("listTag") : $("savedTag");
+    if(!el) return;
+    el.textContent = msg || "salvo";
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(function(){ el.textContent=""; }, 2200);
+  }
+
+  function rowToPlan(r){                 // linha do banco -> plano usado na tela
+    return { id:r.id, name:r.nome, goal:Number(r.valor), n:r.parcelas, unit:r.frequencia,
+             mode:r.modo, round:r.arredondar, start:String(r.inicio).slice(0,10), checked:{} };
+  }
+  function planToRow(p){
+    return { nome:p.name, valor:p.goal, parcelas:p.n, frequencia:p.unit,
+             modo:p.mode, arredondar:p.round, inicio:p.start };
+  }
+
+  function loadMetas(){
+    return sb.from("metas").select("*").order("criado_em",{ascending:false}).then(function(r){
+      if(r.error) throw r.error;
+      var plans = (r.data||[]).map(rowToPlan);
+      return sb.from("depositos").select("meta_id,indice,pago_em").then(function(d){
+        if(d.error) throw d.error;
+        var byId = {};
+        plans.forEach(function(p){ byId[p.id] = p; });
+        (d.data||[]).forEach(function(dep){
+          if(byId[dep.meta_id]) byId[dep.meta_id].checked[dep.indice] = dep.pago_em;
+        });
+        store = { plans: plans, activeId: store.activeId };
+        return plans;
+      });
+    });
+  }
+
+  // ---------- formulário ----------
+  var form = { unit:"month", mode:"equal" };
+
+  function segInit(id, key){
+    var box = $(id);
+    box.addEventListener("click", function(e){
+      var b = e.target.closest("button"); if(!b) return;
+      form[key] = b.dataset.v; segPaint(id,key);
+      if(key==="mode" && form.mode==="index"){
+        var alvo = parseMoney($("fGoal").value);
+        if(alvo>0) $("fCount").value = countForGoal(alvo);
+      }
+      updatePreview();
+    });
+    segPaint(id,key);
+  }
+  function segPaint(id,key){
+    var btns = $(id).querySelectorAll("button");
+    for(var i=0;i<btns.length;i++)
+      btns[i].setAttribute("aria-pressed", btns[i].dataset.v===form[key] ? "true":"false");
+  }
+
+  function triangular(n){ return n*(n+1)/2; }
+  function countForGoal(goal){                 // quantos depósitos chegam mais perto da meta
+    var n = Math.max(1, Math.round((Math.sqrt(1+8*goal)-1)/2));
+    if(Math.abs(triangular(n+1)-goal) < Math.abs(triangular(n)-goal)) n++;
+    return Math.max(1, Math.min(1000, n));
+  }
+
+  function readForm(){
+    return {
+      name: ($("fName").value || "Minha meta").trim(),
+      goal: parseMoney($("fGoal").value),
+      n: Math.max(1, Math.min(1000, parseInt($("fCount").value,10)||0)),
+      unit: form.unit,
+      mode: form.mode,
+      round: $("fRound").checked,
+      start: $("fStart").value || toInput(new Date())
+    };
+  }
+
+  function updatePreview(){
+    var f = readForm();
+    var box = $("preview");
+    var isIndex = f.mode==="index";
+    $("lblCount").textContent = "Quantos " + UNIT_LABEL[f.unit];
+    $("fieldRound").hidden = isIndex;
+    box.className = "preview";
+    if(!(f.goal>0) || !(f.n>0)){ box.textContent = "Preencha a meta para ver a divisão."; return; }
+    if(f.n>1000){ box.className="preview warn"; box.textContent="Máximo de 1000 depósitos."; return; }
+    var v = buildValues(f.goal, f.n, f.mode, f.round, f.unit);
+    var end = addPeriod(dateFromInput(f.start), f.n-1, f.unit);
+    var one = UNIT_ONE[f.unit];
+    var txt;
+    if(f.mode==="cycle"){
+      var L = CYCLE_LEN[f.unit], cyc = CYCLE_NAME[f.unit], t1 = 0, t2 = 0, j;
+      for(j=0;j<Math.min(L,f.n);j++) t1 += v[j];
+      var lastFull = Math.floor(f.n/L);                 // último ciclo completo
+      if(lastFull>=2) for(j=(lastFull-1)*L;j<lastFull*L;j++) t2 += v[j];
+      txt = "Começa em <strong>"+money(v[0])+"</strong> e cai até <strong>"
+          + money(v[Math.min(L,f.n)-1])+"</strong> no fim do "+cyc
+          + " · 1º "+cyc+" soma <strong>"+money(Math.round(t1*100)/100)+"</strong>"
+          + (t2>0 ? ", "+lastFull+"º "+cyc+" soma <strong>"+money(Math.round(t2*100)/100)+"</strong>" : "");
+    }
+    else if(f.mode==="index"){
+      if(triangular(f.n-1) >= f.goal){
+        box.className = "preview warn";
+        box.innerHTML = "Com "+f.n+" depósitos a sequência passa de "+money(f.goal)
+          +". Use cerca de <strong>"+countForGoal(f.goal)+"</strong> depósitos.";
+        return;
+      }
+      txt = "R$ 1 no "+one+" 1, R$ 2 no "+one+" 2... até <strong>"+money(f.n-1)+"</strong> no "
+          + one+" "+(f.n-1)+"; o último fecha a meta com <strong>"+money(v[f.n-1])+"</strong>";
+    }
+    else if(f.mode==="ramp") txt = f.n+" depósitos de <strong>"+money(v[0])+"</strong> até <strong>"+money(v[f.n-1])+"</strong>";
+    else txt = f.n+" depósitos de <strong>"+money(v[0])+"</strong>";
+    box.innerHTML = txt + " · último em <strong>"+fmtLong(end)+"</strong>";
+  }
+
+  ["fName","fCount","fStart"].forEach(function(id){
+    $(id).addEventListener("input", updatePreview);
+  });
+  $("fGoal").addEventListener("input", function(){
+    var atEnd = this.selectionStart === this.value.length;
+    this.value = maskMoney(this.value);
+    if(atEnd){ var end = this.value.length; try{ this.setSelectionRange(end,end); }catch(e){} }
+    if(form.mode==="index"){
+      var alvo = parseMoney(this.value);
+      if(alvo>0) $("fCount").value = countForGoal(alvo);
+    }
+    updatePreview();
+  });
+  $("fGoal").addEventListener("blur", function(){
+    var v = parseMoney(this.value);
+    this.value = v>0 ? fullMoney(v) : "";
+    updatePreview();
+  });
+  $("fRound").addEventListener("change", updatePreview);
+
+  var editingId = null;   // null = criando uma meta nova
+
+  function openSetup(existing){
+    $("board").hidden = true; $("list").hidden = true; $("setup").hidden = false;
+    $("goalLine").hidden = true;
+    editingId = existing ? existing.id : null;
+    $("title").textContent = existing ? "Editar plano" : "Nova meta";
+    $("btnCancel").hidden = !(existing || store.plans.length);
+    $("btnCreate").textContent = existing ? "Salvar plano" : "Criar planilha";
+    var src = existing || {name:"",goal:"",n:12,unit:"month",mode:"equal",round:true,start:toInput(new Date())};
+    $("fName").value = src.name||"";
+    $("fGoal").value = src.goal ? fullMoney(src.goal) : "";
+    $("fCount").value = src.n||12;
+    $("fStart").value = src.start||toInput(new Date());
+    $("fRound").checked = src.round!==false;
+    form.unit = src.unit||"month"; form.mode = src.mode||"equal";
+    segPaint("segUnit","unit"); segPaint("segMode","mode");
+    updatePreview();
+  }
+
+  $("btnCreate").addEventListener("click", function(){
+    var f = readForm();
+    if(!(f.goal>0)){ $("preview").className="preview warn"; $("preview").textContent="Informe um valor de meta maior que zero."; $("fGoal").focus(); return; }
+    if(!(f.n>0)){ $("preview").className="preview warn"; $("preview").textContent="Informe quantos depósitos você vai fazer."; $("fCount").focus(); return; }
+    var atual = editingId ? findPlan(editingId) : null;
+    var keep = (atual && atual.checked) ? atual.checked : {};
+    var checked = {};
+    Object.keys(keep).forEach(function(k){ if(+k < f.n) checked[k]=keep[k]; });
+    f.checked = checked;
+    var btn = this;
+    btn.disabled = true;
+
+    if(atual){
+      f.id = atual.id;
+      sb.from("metas").update(planToRow(f)).eq("id", f.id).then(function(r){
+        if(r.error){ btn.disabled=false; return erro(r.error); }
+        // depósitos que ficaram fora do novo número de parcelas
+        return sb.from("depositos").delete().eq("meta_id", f.id).gte("indice", f.n).then(function(){
+          store.plans[store.plans.indexOf(atual)] = f;
+          plan = f; store.activeId = f.id;
+          btn.disabled = false; showBoard(); flagSaved();
+        });
+      });
+    } else {
+      sb.from("metas").insert(planToRow(f)).select().single().then(function(r){
+        btn.disabled = false;
+        if(r.error) return erro(r.error);
+        f.id = r.data.id;
+        store.plans.unshift(f);
+        plan = f; store.activeId = f.id;
+        showBoard(); flagSaved();
+      });
+    }
+  });
+
+  function erro(e){
+    $("preview").className = "preview warn";
+    $("preview").textContent = "Não deu para salvar: " + (e.message || "tente de novo.");
+  }
+
+  $("btnCancel").addEventListener("click", function(){
+    if(editingId && findPlan(editingId)){ plan = findPlan(editingId); showBoard(); }
+    else showList();
+  });
+  $("btnEdit").addEventListener("click", function(){ openSetup(plan); });
+  $("btnNew").addEventListener("click", function(){ openSetup(null); });
+  $("btnList").addEventListener("click", showList);
+
+  // ---------- lista de metas ----------
+  function findPlan(id){
+    for(var i=0;i<store.plans.length;i++) if(store.plans[i].id===id) return store.plans[i];
+    return null;
+  }
+  function planStats(p){
+    var v = buildValues(p.goal, p.n, p.mode, p.round, p.unit), done = 0, count = 0, i;
+    for(i=0;i<p.n;i++) if(p.checked && p.checked[i]){ done += v[i]; count++; }
+    done = Math.round(done*100)/100;
+    return { done: done, count: count, pct: p.goal>0 ? Math.min(100, done/p.goal*100) : 0 };
+  }
+  function showList(){
+    $("setup").hidden = true; $("board").hidden = true; $("list").hidden = false;
+    $("title").textContent = "Minhas metas";
+    $("goalLine").hidden = true;
+    renderList();
+  }
+  function renderList(){
+    var box = $("listBox"), html = [], i, p, s;
+    if(!store.plans.length){
+      box.innerHTML = '<div class="empty">Nenhuma meta salva ainda. Crie a primeira abaixo.</div>';
+      return;
+    }
+    for(i=0;i<store.plans.length;i++){
+      p = store.plans[i]; s = planStats(p);
+      html.push(
+        '<div class="meta" data-open="'+p.id+'">'
+        + '<div class="info"><div class="nm">'+esc(p.name)+'</div>'
+        + '<div class="sub">'+money(p.goal)+' · '+s.count+' de '+p.n+' depósitos · '+money(s.done)+' guardados</div>'
+        + '<div class="mini"><span style="width:'+s.pct+'%"></span></div></div>'
+        + '<div class="pc">'+Math.round(s.pct)+'%</div>'
+        + '<button class="del" data-del="'+p.id+'">Excluir</button></div>');
+    }
+    box.innerHTML = html.join("");
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  var delArmed = null;
+  $("listBox").addEventListener("click", function(e){
+    var del = e.target.closest("[data-del]");
+    if(del){
+      var id = del.dataset.del;
+      if(delArmed !== id){
+        delArmed = id;
+        del.textContent = "Confirmar";
+        del.style.borderColor = "var(--stamp)"; del.style.color = "var(--stamp)";
+        setTimeout(function(){ if(delArmed===id){ delArmed=null; renderList(); } }, 5000);
+        return;
+      }
+      delArmed = null;
+      var p = findPlan(id);
+      sb.from("metas").delete().eq("id", id).then(function(r){
+        if(r.error){ flagSaved("erro ao excluir"); return; }
+        if(p) store.plans.splice(store.plans.indexOf(p), 1);
+        if(store.activeId===id){ store.activeId = null; plan = null; }
+        renderList(); flagSaved("meta excluída");
+      });
+      return;
+    }
+    var card = e.target.closest("[data-open]");
+    if(card){
+      var alvo = findPlan(card.dataset.open);
+      if(alvo){ plan = alvo; store.activeId = alvo.id; showBoard(); }
+    }
+  });
+
+  var resetArmed = false, resetTimer;
+  function disarmReset(){
+    resetArmed = false;
+    var b = $("btnReset");
+    b.textContent = "Zerar marcações";
+    b.style.borderColor = ""; b.style.color = "";
+  }
+  $("btnReset").addEventListener("click", function(){
+    if(!resetArmed){
+      resetArmed = true;
+      this.textContent = "Confirmar: apagar tudo";
+      this.style.borderColor = "var(--stamp)";
+      this.style.color = "var(--stamp)";
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(disarmReset, 5000);
+      return;
+    }
+    clearTimeout(resetTimer);
+    disarmReset();
+    var metaId = plan.id;
+    sb.from("depositos").delete().eq("meta_id", metaId).then(function(r){
+      if(r.error){ flagSaved("sem conexão"); return; }
+      var p = findPlan(metaId);
+      if(p) p.checked = {};
+      if(plan.id === metaId) showBoard();
+      flagSaved("marcações zeradas");
+    });
+  });
+
+  // ---------- PDF em uma folha ----------
+  function slug(s){
+    return (s||"meta").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40) || "meta";
+  }
+
+  // escolhe colunas/linhas que fazem tudo caber com a maior fonte possível
+  function fitGrid(pw, ph, n, maxChars, colsList){
+    var m = 30, headH = 84, footH = 20;
+    var W = pw - 2*m, H = ph - 2*m - headH - footH, best = null;
+    var minCols = n >= 9 ? 3 : 2, cands = [], k;
+    if(colsList){ for(k=0;k<colsList.length;k++) if(colsList[k]<=44) cands.push(colsList[k]); }
+    else for(k=minCols;k<=44;k++) cands.push(k);
+    for(k=0;k<cands.length;k++){
+      var cols = cands[k];
+      var rows = Math.ceil(n/cols);
+      var cw = W/cols, ch = H/rows;
+      if(ch < 9 || cw < 16) continue;
+      if(ch > cw*1.1) ch = cw*1.1;              // não deixa a célula virar um poste
+      var fs = Math.min(ch*0.5, (cw-5)/(maxChars*0.56), 20);
+      if(fs < 4.5) continue;
+      var aspect = Math.abs(cw/ch - 1.5);       // desempate: quadro com proporção agradável
+      if(!best || fs > best.fs + 0.01 || (fs > best.fs - 0.01 && aspect < best.aspect))
+        best = {cols:cols, rows:rows, cw:cw, ch:ch, fs:fs, m:m, headH:headH, aspect:aspect};
+    }
+    return best;
+  }
+
+  function makePDF(){
+    var J = window.jspdf && window.jspdf.jsPDF;
+    if(!J){ flagSaved("pdf indisponível"); return; }
+
+    var byIndex = plan.mode==="equal";          // valores iguais: numera a cartela
+    var labels = [], maxChars = 1, i, s;
+    for(i=0;i<plan.n;i++){
+      s = shortNum(values[i]);
+      labels.push(byIndex ? String(i+1) : s);
+      maxChars = Math.max(maxChars, s.length, String(i+1).length);
+    }
+
+    var A = {p:[595.28,841.89], l:[841.89,595.28]};
+    var colsList = null, CL = CYCLE_LEN[plan.unit] || 30;
+    if(plan.mode==="cycle" && plan.n > CL){     // colunas que fecham o ciclo em linhas inteiras
+      colsList = [];
+      for(i=2;i<=CL;i++) if(CL % i === 0) colsList.push(i);
+    }
+    var fp = fitGrid(A.p[0], A.p[1], plan.n, maxChars, colsList);
+    var fl = fitGrid(A.l[0], A.l[1], plan.n, maxChars, colsList);
+    var land = fl && (!fp || fl.fs > fp.fs);
+    var g = land ? fl : fp;
+    if(!g){ flagSaved("cartela grande demais"); return; }
+    var pw = land ? A.l[0] : A.p[0], ph = land ? A.l[1] : A.p[1];
+
+    var doc = new J({orientation: land?"landscape":"portrait", unit:"pt", format:"a4"});
+    var m = g.m;
+
+    // cabeçalho
+    var done = 0, count = 0;
+    for(i=0;i<plan.n;i++) if(plan.checked[i]){ done += values[i]; count++; }
+    done = Math.round(done*100)/100;
+    var pct = plan.goal>0 ? Math.round((done/plan.goal)*100) : 0;
+    var ini = dateFromInput(plan.start), fim = addPeriod(ini, plan.n-1, plan.unit);
+
+    doc.setFont("helvetica","bold"); doc.setFontSize(22);
+    doc.text(String(plan.name).toUpperCase(), m, m+20);
+    doc.setFont("helvetica","normal"); doc.setFontSize(11); doc.setTextColor(70);
+    doc.text("Meta " + money(plan.goal) + "   |   " + plan.n + " depósitos, 1 por " +
+             UNIT_ONE[plan.unit] + "   |   " + fmtLong(ini) + " a " + fmtLong(fim), m, m+38);
+    doc.text("Já depositado " + money(done) + " (" + pct + "%)   |   Falta " +
+             money(Math.max(0, Math.round((plan.goal-done)*100)/100)) +
+             (byIndex ? "   |   Cada depósito: " + money(values[0]) : ""), m, m+54);
+    doc.setDrawColor(30); doc.setLineWidth(1);
+    doc.line(m, m+64, pw-m, m+64);
+    doc.setTextColor(20);
+
+    // cartela
+    var gridW = g.cols*g.cw, x0 = m + (pw-2*m-gridW)/2, y0 = m + g.headH;
+    var roomy = g.ch >= 30 && g.cw >= 60;       // cabe número, valor e data no mesmo quadro
+    var small = Math.min(g.fs*0.5, 9);
+    doc.setLineWidth(0.4);
+    for(i=0;i<plan.n;i++){
+      var c = i % g.cols, r = Math.floor(i/g.cols);
+      var x = x0 + c*g.cw, y = y0 + r*g.ch;
+      var paid = !!plan.checked[i];
+      doc.setDrawColor(140);
+      doc.setLineWidth(0.4);
+      if(paid){ doc.setFillColor(232,232,228); doc.rect(x,y,g.cw,g.ch,"FD"); }
+      else doc.rect(x,y,g.cw,g.ch);
+      doc.setTextColor(paid?130:20);
+      doc.setFontSize(g.fs);
+      doc.setFont("helvetica", paid?"normal":"bold");
+      doc.text(roomy ? shortNum(values[i]) : labels[i],
+               x+g.cw/2, y+g.ch/2+g.fs*0.34, {align:"center"});
+      if(roomy){
+        doc.setFont("helvetica","normal"); doc.setFontSize(small); doc.setTextColor(130);
+        doc.text(String(i+1), x+4, y+small+3);
+        doc.text(fmtCellDate(addPeriod(ini, i, plan.unit)), x+g.cw-4, y+g.ch-4, {align:"right"});
+      }
+      if(paid){
+        doc.setDrawColor(150);
+        doc.line(x+2, y+g.ch-2, x+g.cw-2, y+2);
+      }
+    }
+
+    // réguas separando os ciclos
+    if(plan.mode==="cycle" && CL % g.cols === 0 && plan.n > CL){
+      var rowsPerCycle = CL/g.cols;
+      doc.setDrawColor(30); doc.setLineWidth(1.1);
+      for(i=rowsPerCycle; i*g.ch < g.rows*g.ch + 0.5 && i <= g.rows; i += rowsPerCycle)
+        doc.line(x0, y0 + i*g.ch, x0 + gridW, y0 + i*g.ch);
+    }
+
+    // rodapé
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(120);
+    doc.text("Valores em reais. Marque cada quadrado conforme depositar.", m, ph-m+6);
+
+    var file = "planilha-" + slug(plan.name) + ".pdf";
+    try{ doc.save(file); }
+    catch(e){
+      try{ window.open(doc.output("bloburl"), "_blank"); }
+      catch(e2){ flagSaved("não foi possível baixar"); return; }
+    }
+    flagSaved("pdf gerado");
+  }
+
+  $("btnPdf").addEventListener("click", makePDF);
+
+  $("btnOrder").addEventListener("click", function(){
+    orderDesc = !orderDesc;
+    this.textContent = "Ordem: " + (orderDesc ? "maior primeiro" : "menor primeiro");
+    renderGrid();
+  });
+
+  $("btnNext").addEventListener("click", function(){
+    var i = nextIndex();
+    if(i<0) return;
+    toggle(i, true);
+    var el = document.querySelector('.cell[data-i="'+i+'"]');
+    if(el) el.scrollIntoView({block:"nearest", behavior:"smooth"});
+  });
+
+  function nextIndex(){
+    for(var i=0;i<plan.n;i++) if(!plan.checked[i]) return i;
+    return -1;
+  }
+
+  // ---------- painel ----------
+  function showBoard(){
+    $("setup").hidden = true; $("list").hidden = true; $("board").hidden = false;
+    $("title").textContent = plan.name;
+    $("goalLine").hidden = false;
+    $("goalLine").textContent = "Meta: " + money(plan.goal);
+    values = buildValues(plan.goal, plan.n, plan.mode, plan.round, plan.unit);
+    renderGrid(); renderStats();
+  }
+
+  function renderStats(){
+    var done=0, count=0, i;
+    for(i=0;i<plan.n;i++) if(plan.checked[i]){ done += values[i]; count++; }
+    done = Math.round(done*100)/100;
+    var left = Math.max(0, Math.round((plan.goal-done)*100)/100);
+    var pct = plan.goal>0 ? Math.min(100, (done/plan.goal)*100) : 0;
+    $("barFill").style.width = pct+"%";
+    $("pctTxt").textContent = (pct>0 && pct<1 ? pct.toFixed(1) : Math.round(pct)) + "%";
+    $("ratioTxt").textContent = count+" de "+plan.n+" depósitos";
+    $("sDone").textContent = money(done);
+    $("sLeft").textContent = money(left);
+    var nx = nextIndex();
+    $("sNext").textContent = nx<0 ? "concluída" : money(values[nx]);
+    $("sEnd").textContent = fmtLong(addPeriod(dateFromInput(plan.start), plan.n-1, plan.unit));
+    $("btnNext").disabled = nx<0;
+    $("btnNext").textContent = nx<0 ? "Meta concluída" : "Marcar próximo depósito";
+  }
+
+  function cellHTML(i){
+    var paid = plan.checked[i];
+    var when = paid ? "Pago " + fmtShort(new Date(paid))
+                    : (plan.n<=120 ? fmtShort(addPeriod(dateFromInput(plan.start), i, plan.unit)) : "");
+    var pattern = plan.mode==="index" ? i+1 : (plan.mode==="equal" ? values[0] : null);
+    var tag = (i===plan.n-1 && plan.n>1 && pattern!==null && values[i]!==pattern) ? "ajuste" : "";
+    return '<span class="idx">'+(i+1)+'</span>'
+         + '<span class="val"><small>R$</small>'+shortNum(values[i])+'</span>'
+         + '<span class="when">'+when+'</span>'
+         + (tag?'<span class="tag">'+tag+'</span>':'')
+         + (paid?'<span class="stamp">Pago</span>':'');
+  }
+
+  function cellClass(i, pop){
+    var c = "cell";
+    if(plan.mode==="cycle" && i % (CYCLE_LEN[plan.unit]||30) === 0) c += " cstart";
+    if(plan.checked[i]) c += " paid" + (pop ? " pop" : "");
+    return c;
+  }
+
+  function renderGrid(){
+    var g = $("grid"), html = [], i, idx;
+    for(i=0;i<plan.n;i++){
+      idx = orderDesc ? plan.n-1-i : i;
+      html.push('<button class="'+cellClass(idx)+'" data-i="'+idx
+        +'" aria-pressed="'+(plan.checked[idx]?"true":"false")+'">'+cellHTML(idx)+'</button>');
+    }
+    g.innerHTML = html.join("");
+  }
+
+  function pintarCelula(i, pop){
+    var el = document.querySelector('.cell[data-i="'+i+'"]');
+    if(el){
+      el.className = cellClass(i, pop!==false);
+      el.setAttribute("aria-pressed", plan.checked[i]?"true":"false");
+      el.innerHTML = cellHTML(i);
+    }
+    renderStats();
+  }
+
+  function toggle(i, pop){
+    var metaId = plan.id, marcando = !plan.checked[i], antes = plan.checked[i];
+    if(marcando) plan.checked[i] = new Date().toISOString();
+    else delete plan.checked[i];
+    pintarCelula(i, pop);                     // resposta imediata na tela
+
+    var req = marcando
+      ? sb.from("depositos").insert({ meta_id: metaId, indice: i })
+      : sb.from("depositos").delete().eq("meta_id", metaId).eq("indice", i);
+
+    req.then(function(r){
+      if(r.error){                            // desfaz se o banco recusar
+        if(marcando) delete plan.checked[i]; else plan.checked[i] = antes;
+        if(plan.id === metaId) pintarCelula(i, false);
+        flagSaved("sem conexão");
+      } else flagSaved();
+    });
+  }
+
+  $("grid").addEventListener("click", function(e){
+    var c = e.target.closest(".cell"); if(!c) return;
+    toggle(parseInt(c.dataset.i,10));
+  });
+
+  // ---------- entrar na conta ----------
+  var modoCadastro = false;
+
+  function showAuth(msg, tipo){
+    $("list").hidden = true; $("setup").hidden = true; $("board").hidden = true;
+    $("auth").hidden = false;
+    $("title").textContent = modoCadastro ? "Criar conta" : "Entrar";
+    $("goalLine").hidden = true;
+    aviso(msg, tipo);
+  }
+  function aviso(msg, tipo){
+    var box = $("aMsg");
+    box.hidden = !msg;
+    box.className = "preview" + (tipo==="warn" ? " warn" : "");
+    box.textContent = msg || "";
+  }
+  function traduzir(m){
+    m = String(m||"");
+    if(/Invalid login/i.test(m)) return "E-mail ou senha incorretos.";
+    if(/already registered|already exists/i.test(m)) return "Esse e-mail já tem conta. Tente entrar.";
+    if(/at least 6|Password should be/i.test(m)) return "A senha precisa de pelo menos 6 caracteres.";
+    if(/valid email|invalid format/i.test(m)) return "Confira o e-mail digitado.";
+    if(/Email not confirmed/i.test(m)) return "Confirme o e-mail pelo link que enviamos e tente de novo.";
+    return m;
+  }
+
+  $("btnSwitch").addEventListener("click", function(){
+    modoCadastro = !modoCadastro;
+    $("btnAuth").textContent = modoCadastro ? "Criar conta" : "Entrar";
+    this.textContent = modoCadastro ? "Já tenho conta" : "Criar conta";
+    $("title").textContent = modoCadastro ? "Criar conta" : "Entrar";
+    $("aPass").setAttribute("autocomplete", modoCadastro ? "new-password" : "current-password");
+    aviso("");
+  });
+
+  $("btnAuth").addEventListener("click", function(){
+    var mail = $("aMail").value.trim(), pass = $("aPass").value;
+    if(!mail || !pass){ aviso("Preencha e-mail e senha.", "warn"); return; }
+    var btn = this; btn.disabled = true;
+    aviso(modoCadastro ? "Criando sua conta..." : "Entrando...");
+    var p = modoCadastro
+      ? sb.auth.signUp({ email: mail, password: pass })
+      : sb.auth.signInWithPassword({ email: mail, password: pass });
+    p.then(function(r){
+      btn.disabled = false;
+      if(r.error) return aviso(traduzir(r.error.message), "warn");
+      if(!r.data.session) return aviso("Conta criada. Confirme o link enviado para " + mail + " e depois entre.");
+      $("aPass").value = "";
+      entrar();
+    }).catch(function(e){ btn.disabled = false; aviso(traduzir(e.message), "warn"); });
+  });
+
+  $("aPass").addEventListener("keydown", function(e){ if(e.key==="Enter") $("btnAuth").click(); });
+  $("aMail").addEventListener("keydown", function(e){ if(e.key==="Enter") $("aPass").focus(); });
+
+  // ---------- esqueci minha senha ----------
+  function avisoR(msg, tipo){
+    var box = $("rMsg");
+    box.hidden = !msg;
+    box.className = "preview" + (tipo==="warn" ? " warn" : "");
+    box.textContent = msg || "";
+  }
+  function showRecover(msg, tipo){
+    $("auth").hidden = true; $("list").hidden = true; $("setup").hidden = true; $("board").hidden = true;
+    $("recover").hidden = false;
+    $("title").textContent = "Nova senha";
+    $("goalLine").hidden = true;
+    avisoR(msg, tipo);
+  }
+  $("btnForgot").addEventListener("click", function(){
+    var mail = $("aMail").value.trim();
+    if(!mail){ aviso("Digite seu e-mail acima e clique de novo para receber o link.", "warn"); $("aMail").focus(); return; }
+    var btn = this; btn.disabled = true;
+    aviso("Enviando link de redefinição...");
+    sb.auth.resetPasswordForEmail(mail, location.origin + location.pathname).then(function(r){
+      btn.disabled = false;
+      if(r.error) return aviso(traduzir(r.error.message), "warn");
+      aviso("Enviamos um link para " + mail + ". Abra o e-mail e clique nele para criar uma nova senha.");
+    });
+  });
+  $("btnSavePass").addEventListener("click", function(){
+    var pass = $("rPass").value;
+    if(!pass || pass.length < 6){ avisoR("A senha precisa de pelo menos 6 caracteres.", "warn"); return; }
+    var btn = this; btn.disabled = true;
+    avisoR("Salvando...");
+    sb.auth.updateUser({ password: pass }).then(function(r){
+      btn.disabled = false;
+      if(r.error) return avisoR(traduzir(r.error.message), "warn");
+      $("rPass").value = "";
+      entrar();
+    });
+  });
+  $("rPass").addEventListener("keydown", function(e){ if(e.key==="Enter") $("btnSavePass").click(); });
+  $("rShow").addEventListener("change", function(){ $("rPass").type = this.checked ? "text" : "password"; });
+  $("btnBackLogin").addEventListener("click", function(){ showAuth(""); });
+
+  function sair(){
+    sb.auth.signOut().then(function(){
+      store = { plans: [], activeId: null }; plan = null;
+      modoCadastro = false;
+      $("btnAuth").textContent = "Entrar"; $("btnSwitch").textContent = "Criar conta";
+      showAuth("");
+    });
+  }
+  $("btnOut").addEventListener("click", sair);
+  $("btnOutBoard").addEventListener("click", sair);
+
+  function entrar(){
+    $("auth").hidden = true;
+    $("title").textContent = "Minhas metas";
+    $("listBox").innerHTML = '<div class="empty">Carregando suas metas...</div>';
+    $("list").hidden = false;
+    loadMetas().then(function(plans){
+      if(!plans.length){ openSetup(null); return; }
+      showList();
+    }).catch(function(e){
+      $("listBox").innerHTML = '<div class="empty">Não deu para carregar suas metas: '
+        + esc(e.message||"") + '</div>';
+    });
+  }
+
+  // ---------- início ----------
+  function mostrarFalha(msg){
+    var d = document.createElement("div");
+    d.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:99;background:#B0271B;color:#fff;"
+      + "padding:10px 14px;font:14px/1.4 sans-serif";
+    d.textContent = "Erro na página: " + msg;
+    document.body.appendChild(d);
+  }
+  window.addEventListener("error", function(e){ mostrarFalha(e.message || "falha ao carregar"); });
+
+  function tokensDeRecuperacao(){
+    var h = (location.hash || "").replace(/^#/, "");
+    if(!h) return null;
+    var p = {}, parts = h.split("&"), i, kv;
+    for(i=0;i<parts.length;i++){
+      kv = parts[i].split("=");
+      p[decodeURIComponent(kv[0])] = decodeURIComponent((kv[1]||"").replace(/\+/g," "));
+    }
+    return (p.type === "recovery" && p.access_token) ? p : null;
+  }
+
+  function iniciar(){
+    try {
+      sb = window.sb || criarCliente();
+      $("fStart").value = toInput(new Date());
+      segInit("segUnit","unit"); segInit("segMode","mode");
+      var rec = tokensDeRecuperacao();
+      if(rec){
+        sb.auth.definirSessao({ access_token: rec.access_token, refresh_token: rec.refresh_token, expires_in: +rec.expires_in || 3600 });
+        try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
+        showRecover();
+        return;
+      }
+      sb.auth.getSession().then(function(r){
+        if(r.data && r.data.session) entrar();
+        else showAuth("");
+      }).catch(function(){ showAuth(""); });
+    } catch(e){ mostrarFalha(e.message); }
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
+  else iniciar();
+})();
+</script>
