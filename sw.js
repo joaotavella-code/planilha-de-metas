@@ -1,6 +1,6 @@
 // Service worker da Planilha de Metas — cache do app shell (mesma origem).
 // Chamadas ao Supabase (outra origem) sempre passam pela rede.
-var CACHE = "metas-v2";
+var CACHE = "metas-v3";
 var ASSETS = [
   "./",
   "./index.html",

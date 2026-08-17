@@ -302,6 +302,7 @@
 
   <!-- ====== PAINEL ====== -->
   <section id="board" hidden>
+    <button class="btn ghost small" id="btnBackHome" style="margin-bottom:16px">← Voltar ao início</button>
     <div class="barline">
       <b id="pctTxt">0%</b>
       <em id="ratioTxt">0 de 0 depósitos</em>
@@ -808,6 +809,7 @@
     else showList();
   });
   $("btnBackList").addEventListener("click", showList);
+  $("btnBackHome").addEventListener("click", showList);
   $("btnEdit").addEventListener("click", function(){ openSetup(plan); });
   $("btnNew").addEventListener("click", function(){ openSetup(null); });
   $("btnList").addEventListener("click", showList);
