@@ -131,6 +131,13 @@
   .dot{display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:middle}
 
   .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:11px 18px; border-radius:12px; font-size:14px; z-index:60; box-shadow:0 8px 30px rgba(0,0,0,.4)}
+
+  /* ---- Modal de edição ---- */
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:80; display:flex; align-items:flex-end; justify-content:center}
+  .modal .sheet{background:var(--panel); border:1px solid var(--line); border-radius:18px 18px 0 0; padding:18px; width:100%; max-width:640px; max-height:92vh; overflow:auto}
+  @media(min-width:640px){ .modal{align-items:center} .modal .sheet{border-radius:18px} }
+  .sheethead{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px}
+  .sheethead h3{font-size:17px}
 </style>
 </head>
 <body>
@@ -257,6 +264,39 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL EDITAR ===================== -->
+<div id="editModal" class="modal hide">
+  <div class="sheet">
+    <div class="sheethead">
+      <h3>Editar lançamento</h3>
+      <button class="iconbtn" id="edClose" title="Fechar">✕</button>
+    </div>
+    <div class="seg">
+      <button id="edExp" class="rec" data-type="expense">− Despesa</button>
+      <button id="edInc" class="inc" data-type="income">+ Receita</button>
+    </div>
+    <div class="fld"><label>Descrição</label><input id="edDesc" placeholder="Descrição"></div>
+    <div class="grid2">
+      <div class="fld"><label>Valor (R$)</label><input id="edAmount" inputmode="numeric" placeholder="0,00"></div>
+      <div class="fld"><label>Categoria</label><input id="edCat" list="catList" placeholder="Categoria"></div>
+    </div>
+    <div class="grid2">
+      <div class="fld"><label>Data (competência)</label><input id="edDate" type="date"></div>
+      <div class="fld"><label>Vencimento (opcional)</label><input id="edDue" type="date"></div>
+    </div>
+    <div class="grid2">
+      <div class="fld"><label>Situação</label>
+        <select id="edStatus">
+          <option value="pending">A pagar / a receber</option>
+          <option value="paid">Já pago / recebido</option>
+        </select>
+      </div>
+      <label class="chk" style="align-self:end; margin-bottom:14px"><input type="checkbox" id="edRec"> Conta fixa (todo mês)</label>
+    </div>
+    <button class="btn" id="edSave">Salvar alterações</button>
   </div>
 </div>
 
@@ -466,14 +506,17 @@
   $("tabL").onclick=function(){ $("tabL").classList.add("on"); $("tabD").classList.remove("on"); $("viewL").classList.remove("hide"); $("viewD").classList.add("hide"); };
   $("tabD").onclick=function(){ $("tabD").classList.add("on"); $("tabL").classList.remove("on"); $("viewD").classList.remove("hide"); $("viewL").classList.add("hide"); renderDash(); };
 
-  // seletor tipo
+  // preenche o datalist de categorias conforme o tipo
+  function preencherCat(t){
+    var dl=$("catList"); dl.innerHTML="";
+    (t==="expense"?CATS_EXP:CATS_INC).forEach(function(c){ var o=document.createElement("option"); o.value=c; dl.appendChild(o); });
+  }
+  // seletor tipo (formulário de adicionar)
   function setTipo(t){
     tipo=t;
     $("segExp").classList.toggle("on", t==="expense");
     $("segInc").classList.toggle("on", t==="income");
-    // atualiza datalist de categorias
-    var dl=$("catList"); dl.innerHTML="";
-    (t==="expense"?CATS_EXP:CATS_INC).forEach(function(c){ var o=document.createElement("option"); o.value=c; dl.appendChild(o); });
+    preencherCat(t);
   }
   $("segExp").onclick=function(){ setTipo("expense"); };
   $("segInc").onclick=function(){ setTipo("income"); };
@@ -596,6 +639,9 @@
     meta.innerHTML=bits; mid.appendChild(meta);
     // valor
     var amt=document.createElement("div"); amt.className="amt "+(inc?"inc":"exp"); amt.textContent=(inc?"+":"−")+fmt(t.amount).replace("R$ ","R$ ");
+    // editar
+    var ed=document.createElement("button"); ed.className="x"; ed.innerHTML="✎"; ed.title="Editar";
+    ed.onclick=function(){ abrirEdicao(t); };
     // excluir
     var x=document.createElement("button"); x.className="x"; x.innerHTML="🗑"; x.title="Excluir";
     x.onclick=function(){
@@ -604,7 +650,7 @@
       remover(t.id).then(function(){ itens=itens.filter(function(i){return i.id!==t.id;}); renderLista(); if(!$("viewD").classList.contains("hide")) renderDash(); })
         .catch(erroAuth).then(function(){ x.disabled=false; });
     };
-    el.appendChild(st); el.appendChild(mid); el.appendChild(amt); el.appendChild(x);
+    el.appendChild(st); el.appendChild(mid); el.appendChild(amt); el.appendChild(ed); el.appendChild(x);
     return el;
   }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
@@ -677,8 +723,7 @@
 
   // ---------------- Máscara de moeda (R$) ----------------
   // conforme digita, formata em reais: 327000 -> "3.270,00"
-  (function(){
-    var el=$("fAmount");
+  function aplicarMascaraMoeda(el){
     el.addEventListener("input", function(){
       var d=el.value.replace(/\D/g,"");
       if(!d){ el.value=""; return; }
@@ -686,7 +731,60 @@
       var cents=parseInt(d,10);
       el.value=(cents/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
     });
-  })();
+  }
+  aplicarMascaraMoeda($("fAmount"));
+  aplicarMascaraMoeda($("edAmount"));
+
+  // ---------------- Editar lançamento (modal) ----------------
+  var edId=null, edTipo="expense";
+  function setEdTipo(t){
+    edTipo=t;
+    $("edExp").classList.toggle("on", t==="expense");
+    $("edInc").classList.toggle("on", t==="income");
+  }
+  $("edExp").onclick=function(){ setEdTipo("expense"); preencherCat("expense"); };
+  $("edInc").onclick=function(){ setEdTipo("income"); preencherCat("income"); };
+
+  function abrirEdicao(t){
+    edId=t.id;
+    setEdTipo(t.type);
+    preencherCat(t.type);
+    $("edDesc").value = t.description || "";
+    $("edAmount").value = Number(t.amount).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+    $("edCat").value = t.category || "";
+    $("edDate").value = t.date || "";
+    $("edDue").value = t.due_date || "";
+    $("edStatus").value = t.status || "pending";
+    $("edRec").checked = !!t.is_recurring;
+    $("editModal").classList.remove("hide");
+  }
+  function fecharEdicao(){ $("editModal").classList.add("hide"); edId=null; }
+  $("edClose").onclick=fecharEdicao;
+  $("editModal").onclick=function(e){ if(e.target===$("editModal")) fecharEdicao(); };
+
+  $("edSave").onclick=function(){
+    if(!edId) return;
+    var desc=$("edDesc").value.trim();
+    var amount=parseMoney($("edAmount").value);
+    if(!desc){ toast("Informe a descrição."); return; }
+    if(isNaN(amount)||amount<=0){ toast("Informe um valor válido."); return; }
+    var novoStatus=$("edStatus").value;
+    var patch={
+      type:edTipo, amount:amount, description:desc,
+      category:$("edCat").value.trim()||null,
+      date:$("edDate").value || ymd(new Date()),
+      due_date:$("edDue").value||null,
+      status:novoStatus,
+      is_recurring:$("edRec").checked,
+      paid_at: novoStatus==="paid" ? new Date().toISOString() : null
+    };
+    $("edSave").disabled=true;
+    atualizar(edId, patch).then(function(){
+      toast("Lançamento atualizado ✓");
+      fecharEdicao();
+      carregar();
+    }).catch(erroAuth).then(function(){ $("edSave").disabled=false; });
+  };
 
   // ---------------- Boot ----------------
   setTipo("expense");
