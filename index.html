@@ -295,6 +295,7 @@
       <div class="preview" id="preview">Preencha a meta para ver a divisão.</div>
 
       <button class="btn" id="btnCreate">Criar planilha</button>
+      <button class="btn ghost" id="btnBackList">Voltar às metas</button>
       <button class="btn ghost" id="btnCancel" hidden>Cancelar</button>
     </div>
   </section>
@@ -749,6 +750,7 @@
     editingId = existing ? existing.id : null;
     $("title").textContent = existing ? "Editar plano" : "Nova meta";
     $("btnCancel").hidden = !(existing || store.plans.length);
+    $("btnBackList").hidden = !(existing || store.plans.length);
     $("btnCreate").textContent = existing ? "Salvar plano" : "Criar planilha";
     var src = existing || {name:"",goal:"",n:12,unit:"month",mode:"equal",round:true,start:toInput(new Date())};
     $("fName").value = src.name||"";
@@ -805,6 +807,7 @@
     if(editingId && findPlan(editingId)){ plan = findPlan(editingId); showBoard(); }
     else showList();
   });
+  $("btnBackList").addEventListener("click", showList);
   $("btnEdit").addEventListener("click", function(){ openSetup(plan); });
   $("btnNew").addEventListener("click", function(){ openSetup(null); });
   $("btnList").addEventListener("click", showList);
